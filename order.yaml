@@ -1,0 +1,9 @@
+# 一個可能的訂單資訊可能會長這樣
+Order_reference: 123
+Lines:
+  - sku: RED-CHAIR
+    qty: 25
+  - sku: BLU-CHAIR
+    qty: 25
+  - sku: GRN-CHAIR
+    qty: 25
