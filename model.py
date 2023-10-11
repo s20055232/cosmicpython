@@ -59,3 +59,9 @@ class Batch:
         if other.eta is None:
             return True
         return self.eta > other.eta
+
+
+def allocate(line: OrderLine, batches: list[Batch]) -> str:
+    batch = next(b for b in sorted(batches) if b.can_allocate(line))
+    batch.allocate(line)
+    return batch.reference
