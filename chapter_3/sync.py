@@ -7,35 +7,50 @@ BLOCKSIZE = 65536
 
 
 def sync(source, dest):
-    # Walk the source folder and build a dict of filenames and their hashes
     source_hashes = {}
-    for folder, _, files in os.walk(source):
+    source_hashes = read_paths_and_hashes(source)
+    dest_hashes = {}
+    dest_hashes = read_paths_and_hashes(dest)
+
+    actions = determine_actions(source_hashes, dest_hashes, source, dest)
+
+    for action, *paths in actions:
+        if action == "copy":
+            shutil.copyfile(*paths)
+        if action == "move":
+            shutil.move(*paths)
+        if action == "delete":
+            os.remove(paths[0])
+
+
+def read_paths_and_hashes(root):
+    # Walk the root folder and build a dict of filenames and their hashes
+    hashes = {}
+    for folder, _, files in os.walk(root):
         for fn in files:
-            source_hashes[hash_file(Path(folder) / fn)] = fn
+            hashes[hash_file(Path(folder) / fn)] = fn
+    return hashes
 
-    seen = set()  # Keep track of the files we've found in the target
 
-    # Walk the target folder and get the filenames and hashes
-    for folder, _, files in os.walk(dest):
-        for fn in files:
-            dest_path = Path(folder) / fn
-            dest_hash = hash_file(dest_path)
-            seen.add(dest_hash)
-
-            # if there's a file in target that's not in source, delete it
-            if dest_hash not in source_hashes:
-                dest_path.remove()
-
+def determine_actions(src_hashes, dst_hashes, src_folder, dst_folder):
+    for sha, filename in src_hashes.items():
+        if sha not in dst_hashes:
+            sourcepath = Path(src_folder) / filename
+            destpath = Path(dst_folder) / filename
+            # for every file that appears in source but not target, copy the file to
+            # the target
+            yield "copy", sourcepath, destpath
+        elif dst_hashes[sha] != filename:
+            olddestpath = Path(dst_folder) / dst_hashes[sha]
+            newdestpath = Path(dst_folder) / filename
             # if there's a file in target that has a different path in source,
             # move it to the correct path
-            elif dest_hash in source_hashes and fn != source_hashes[dest_hash]:
-                shutil.move(dest_path, Path(folder) / source_hashes[dest_hash])
+            yield "move", olddestpath, newdestpath
 
-    # for every file that appears in source but not target, copy the file to
-    # the target
-    for source_hash, fn in source_hashes.items():
-        if source_hash not in seen:
-            shutil.copy(Path(source) / fn, Path(dest) / fn)
+        for sha, filename in dst_hashes.items():
+            if sha not in src_hashes:
+                # if there's a file in target that's not in source, delete it
+                yield "delete", dst_folder / filename
 
 
 def hash_file(path: Path):
