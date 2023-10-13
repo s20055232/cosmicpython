@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import date
 
 
-@dataclass(frozen=True)
+@dataclass(unsafe_hash=True)
 class OrderLine:
     """一個沒有方法，不可變的資料類別，代表現實場景的“訂單行”"""
 
